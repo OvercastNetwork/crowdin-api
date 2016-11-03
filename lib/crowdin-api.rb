@@ -4,6 +4,8 @@ require 'rest-client'
 
 require "crowdin-api/errors"
 require "crowdin-api/methods"
+require "crowdin-api/model"
+require "crowdin-api/cache_client"
 require "crowdin-api/version"
 
 
@@ -90,12 +92,14 @@ module Crowdin
       log.debug("args: #{@response.args}") if log
 
       if @response.headers[:content_disposition]
-        filename = params[:output] || @response.headers[:content_disposition][/attachment; filename="(.+?)"/, 1]
-        body = @response.body
-        file = open(filename, 'wb')
-        file.write(body)
-        file.close
-        return true
+        if filename = params[:output]
+          open(filename, 'wb') do |file|
+            file.write(@response.body)
+          end
+          true
+        else
+          @response.body
+        end
       else
         doc = JSON.load(@response.body)
         log.debug("body: #{doc}") if log
